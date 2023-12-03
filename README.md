@@ -1,4 +1,4 @@
-# LSTM-RNN Taylor Swift Lyrics Generator
+ LSTM-RNN Taylor Swift Lyrics Generator
 
 ## Table of Contents
 
@@ -178,7 +178,5 @@ for i in range(generated_characters):
     pattern = pattern[1:len(pattern)]
 
 print('\nDone')
-
-
 
 
