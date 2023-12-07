@@ -1,182 +1,160 @@
- LSTM-RNN Taylor Swift Lyrics Generator
+# Taylor Swift Lyrics Generator using LSTM-RNN with Keras and TensorFlow
 
-## Table of Contents
+## Overview
 
-1. [Problem Formulation](#problem-formulation)
-2. [Preparing the Workspace](#preparing-the-workspace)
-3. [Pre-Processing](#pre-processing)
-4. [Model Building](#model-building)
-5. [Validation and Model Accuracy](#validation-and-model-accuracy)
-6. [Prediction and Results](#prediction-and-results)
-7. [Conclusion and Future Work](#conclusion-and-future-work)
+This project focuses on creating a Taylor Swift lyrics generator using Long Short-Term Memory Recurrent Neural Networks (LSTM-RNN). LSTMs are a special type of Recurrent Neural Network (RNN) capable of learning long-term dependencies. The goal is to design, train, validate, and test a model that can generate lyrics in the style of Taylor Swift.
 
 ## Problem Formulation
 
-Long Short Term Memory Networks (LSTMs) are a specialized type of Recurrent Neural Network (RNN), capable of learning long-term dependencies. Introduced by Hochreiter & Schmidhuber (1997), LSTMs have found applications in language modeling, text classification, and natural language generation (NLG). This project focuses on implementing an LSTM-RNN to generate Taylor Swift-like lyrics using Keras and TensorFlow.
+LSTM-RNNs are powerful for language modeling, text classification, and natural language generation. Natural Language Generation involves producing text from structured data. This project falls under the category of natural language generation, specifically generating lyrics.
 
 ## Preparing the Workspace
 
-To accommodate the large dataset, Google Colab, a free cloud service, is utilized. The project relies on Keras and TensorFlow, two prominent deep learning libraries. The necessary libraries are imported as follows:
+Due to the large dataset, Google Colab, a cloud service for deep learning, is chosen for its high computation capacity. The project utilizes Keras and TensorFlow, with Keras providing a high-level interface for building neural networks, and TensorFlow serving as the backend for computations.
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/20f70bc2-7c11-43b7-b8ea-cf590d8bb895)
 
-```python
-import numpy as np
-import pandas as pd
-import sys 
-import seaborn as sns
-from keras.models import Sequential
-from keras.layers import LSTM, Activation, Flatten, Dropout, Dense, Embedding, TimeDistributed
-from keras.callbacks import ModelCheckpoint
-from keras.utils import np_utils
-import tensorflow as tf
+### Libraries Used
 
-Pre-Processing
-The pre-processing phase involves data acquisition, exploration, and cleaning. The dataset, obtained from Kaggle via the Genius.com API, consists of Taylor Swift song lyrics. Key steps include univariate analysis, quality checks, and dataset tidying.
+- **Keras:** An open-source neural network library written in Python.
+- **TensorFlow:** An open-source machine learning library designed for training neural networks.
 
 ## Pre-Processing
 
-### Loading and Exploring the Dataset
+Data pre-processing is a critical step, involving data acquisition, exploration, and cleaning.
 
-The dataset is loaded from 'taylor_swift_lyrics.csv', and the first 20 rows are displayed for initial exploration:
+### Data Acquisition and Exploration
 
-```python
-#loading dataset
-dataset = pd.read_csv('taylor_swift_lyrics.csv', encoding="latin1")
+The dataset used is obtained from Kaggle via the Genius.com API, containing Taylor Swift's song lyrics with details like artist name, album, track title, lyric content, line number, and release year.
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/c5d0cbdd-22f3-4941-9a01-c6a03282c13b)
 
-#displaying first 20 rows of the dataset
-dataset.head(20)
+### Data Dictionary
 
-#shape of dataset
-dataset.shape
+The dataset includes the following fields:
 
-Visualizations using seaborn are employed to analyze various aspects of the dataset, such as the distribution of songs by artist, album, track title, and more:
+- `artist`: Artist name
+- `album`: Album name
+- `track_title`: Song title
+- `track_n`: Track number in the album
+- `lyric`: Lyric content
+- `line`: Line number in the track
+- `year`: Year of release
 
-sns.countplot(x='artist', data=dataset, color='pink')
-sns.countplot(x='album', data=dataset, palette='cubehelix')
-sns.countplot(x='track_title', data=dataset, palette='flag_r')
-sns.countplot(x='track_n', data=dataset, palette='RdPu')
-sns.countplot(x='line', data=dataset, palette='YlGn_r')
-sns.countplot(x='album', data=dataset, palette='coolwarm')
+### Univariate Analysis and Quality Checks
 
-#displaying info about dataset
-dataset.info()
+Initial analysis involves checking the first few rows of the dataset and ensuring there are no missing values.
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/96d5cd8a-34b3-4d86-b06e-b338182995e4)
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/3b6e072d-1e80-442b-ac86-4589eba0f7ab)
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/fef2a6ca-6427-46e1-89a4-b84a048e5629)
 
-Processing Lyrics
-A function processFirstLine is defined to help process the lyrics of songs and organize them for further analysis:
+### Dataset Tidying
 
-#function to help us process first lines of songs
-def processFirstLine(lyrics, songID, songName, row):
-    lyrics.append(row['lyric'] + '\n')
-    songID.append(row['year'] * 100 + row['track_n'])
-    songName.append(row['track_title'])
-    return lyrics, songID, songName
+The dataset is organized into a new DataFrame with columns for unique song identifiers (`songID`), track titles (`songName`), and lyrics (`lyrics`).
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/1be09b4d-d983-4db9-9d3c-759e0eeb0ca8)
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/d9afd292-1131-482d-b61e-3c19af9efbe0)
 
-lyrics = []  # initializing an empty list lyrics
-songID = []  # initializing an empty list songID
-songName = []  # initializing an empty list songName
-...
+### Text Encoding
 
-The lyrics are processed and stored in a pandas DataFrame named lyrics_data. The data is then saved to a text file, 'lyricsText.txt', for further use.
+To enable the model to process text, characters are encoded into integers. Two dictionaries are created for conversion between characters and integers.
 
-Encoding and Normalization
-Categorical data is encoded, and necessary preprocessing for the LSTM model is performed:
+### Dataset Splittin![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/8dfe55b7-6390-4afb-8609-fc76158eb3b7)
+g
 
-# Encoding and Normalization
-textFileName = 'lyricsText.txt'
-raw_text = open(textFileName, encoding='UTF-8').read()
-raw_text = raw_text.lower()
-...
+The dataset is split into training and test sets using the `train_test_split` function from `sklearn.model_selection`.
 
-Generating Sequences for Model Input
-The data is transformed into sequences of 100 characters for input to the LSTM model:
+## Model Building
 
-# Generating Sequences for Model Input
-seq_len = 100
-data_X = []  # initializing an empty list data_X that will store sequences of 100 characters
-data_y = []  # initializing an empty list data_y that will store targets of data_X
-...
+The LSTM-RNN model is built using Keras with TensorFlow as the backend.
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/3dd0a35f-d540-4ef9-963b-640c8d605256)
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/cfdf1fb2-4975-4f15-bca8-5c335d0b11c7)
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/321224e1-a990-4886-937a-d7cce1a2ff5a)
 
-Model Building
-Building the LSTM Model
-The LSTM model is constructed using Keras:
 
-# Building the LSTM Model
-# defining a sequential model
-model = Sequential()
+### Model Architecture
 
-# add an LSTM layer as an input layer
-model.add(LSTM(256, input_shape=(X.shape[1], X.shape[2]), return_sequences=True))
-...
+The model architecture consists of:
+- An input layer with an LSTM unit.
+- Three hidden layers with 256 nodes each.
+- A dense output layer with a softmax activation function for multiclass classification.
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/79b0d6c4-fe65-447a-aaef-5240a4f0a0cf)
+This step takes a huge amount of time since the dataset is very large . It took me approximately 65 minutes to run one single epoch.
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/19239d96-d88d-4ae3-b224-f3e0dd614e3e)
 
-The model is compiled and checkpoints are set up to save weights:
-# Compiling the Model
-model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=["accuracy"])
+### Model Compilation
 
-# Setting up Model Checkpoints
-checkpoint_name = 'Weights-LSTM-improvement-{epoch:03d}-{loss:.5f}-bigger.hdf5'
-checkpoint = ModelCheckpoint(checkpoint_name, monitor='loss', verbose=1, save_best_only=True, mode='min')
-callbacks_list = [checkpoint]
+The model is compiled using categorical cross-entropy loss and the Adam optimizer.
 
-Training the Model
-The model is trained using the defined parameters:
-# Training the Model
-model_params = {'epochs': 10,
-                'batch_size': 128,
-                'callbacks': callbacks_list,
-                'verbose': 1,
-                'validation_split': 0.2,
-                'validation_data': None,
-                'shuffle': True,
-                'initial_epoch': 0,
-                'steps_per_epoch': None,
-                'validation_steps': None}
+### Model Training
 
-model.fit(X,
-          y,
-          epochs=model_params['epochs'],
-          batch_size=model_params['batch_size'],
-          callbacks=model_params['callbacks'],
-          verbose=model_params['verbose'],
-          validation_split=model_params['validation_split'],
-          validation_data=model_params['validation_data'],
-          shuffle=model_params['shuffle'],
-          initial_epoch=model_params['initial_epoch'],
-          steps_per_epoch=model_params['steps_per_epoch'],
-          validation_steps=model_params['validation_steps'])
+Training involves feeding the model with input data (`X`) and target data (`y`). The training process is iterative (epochs), and checkpoints are used to save weights after each epoch.
 
-Validation and Model Accuracy
-Validation
-The model's accuracy and loss on both training and validation data are visualized:
-# Validation
-# displaying values of accuracy of trained data, accuracy of validation data, loss on training data, and loss on validation data
-...
-Model Accuracy
-The performance of the model is evaluated using the evaluate method:
-# Model Accuracy
-model.evaluate(X_test, y_test)
 
-Prediction and Results
-Prediction
-The trained model is used to predict output for new data and generate lyrics:
+### Validation and Model Accuracy
+1. Validation
+We can validate our model by displaying values of accuracy of trained data, accuracy of validation data , loss on training data and loss on validation data.
 
-# Prediction
-start = np.random.randint(0, len(data_X) - 1)
-pattern = data_X[start]
+We can observe that the loss is decreasing and the accuracy is increasing . This proves that the model is learning effectively and that training the network through some more epochs will enable us to reach a satisfying accuracy.
 
-print('Seed : ')
-print("\"", ''.join([int_chars[value] for value in pattern]), "\"\n")
 
-generated_characters = 2000
+We can visualize this graphically by plotting the history of our training.
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/ceddc02d-1fd1-4198-84e9-503ba8835e76)
 
-for i in range(generated_characters):
-    x = np.reshape(pattern, (1, len(pattern), 1))
-    x = x / float(n_vocab)
-    prediction = model.predict(x, verbose=0)
-    index = np.argmax(prediction)
-    result = int_chars[index]
-    sys.stdout.write(result)
-    pattern.append(index)
-    pattern = pattern[1:len(pattern)]
 
-print('\nDone')
+2. Model Accuracy
+Checking the performance of the model is one of the most important steps in model testing.This will enable us to see how the model will behave towards never-seen data and if how accurate its predictions are.
+
+We can use evaluate method to measure this value :
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/92839c9e-f80f-4c9c-8e2a-7c11c1ba5d8d)
+
+
+We obtained a loss of 2.16 and an accuracy of 0.41 .These values can be improved by tweaking hyperparameters of the model and also training it for more epochs.The more you train your model the more accurate your results are !
+
+Section 6 : Prediction and results
+1. Prediction
+Now that our model is built , trained , validated and tested , we can finally use it to predict output for new data and generate some fake lyrics.
+
+Since we have a full list of lyrics sequences we will pick a random index in the list as our starting point and predict 500 characters that will follow this sequence.
+
+Step 1:We reshape the sequence x
+
+Step 2:We normalize it
+
+Step 3:We calculate the probability of each class to follow this sequence
+
+Step 4:We detect the index of the highest probability
+
+Step 5:We determine the class whose probability is the highest
+
+Step 6:We append this character(result of the prediction)to the sequence
+
+Step 7:We remove the first character of the sequence to obtain a new sequence and repeat the same process until predicting 500 characters.
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/91b97030-f0af-463b-a43b-88c16714379a)
+
+
+2. Results
+Then we see our 500 characters being generated..
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/3829425e-0ff0-4ae9-aacc-6cd4fe158bc7)
+
+
+We can see that the model generated some fake lyrics and there are many spelling mistakes.
+
+If we want to generate better lyrics , we need to tweak some parameters .
+
+The first seed is from Ours, a Taylor Swift song from her album Speak Now produced in 2010, let’s compare our fake lyrics to true ones:
+
+
+Artificially generated lyrics
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/3829425e-0ff0-4ae9-aacc-6cd4fe158bc7)
+Original lyrics
+![image](https://github.com/nandinikumawat/Natural-Language-Generation-Application/assets/63352345/418bf97c-8086-45a0-bcb3-47dfa8e8e16b)
+
+The difference between the two lyrics is huge since the model needs to train more and more in order to generate more accurate lyrics .Since the dataset is extremely huge, it took me 65 minutes to run one single epoch despite using advanced cloud services with very high calculation capacity which made it hard to reach a satisfying accuracy .Still, the model will never generate better lyrics for Taylor Swift, training it will enable us to generate reasonable words but never better lyrics. Artificial intelligence can never beat natural intelligence.
+
+A considerable number of extensions could be made to the work undertaken in this project. The three main paths of progression that could be taken are:
+
+1. Improving the architecture of the network (number of layers , number of neurons in each layer …)
+
+2. Improving and extending the number of epochs because the more the model trains itself, the more accurate its predictions are.
+
+3. Using textgenrnn, a python package that abstracts the process of creating and training LSTM-RNN to a few lines of code, with numerous model architecture and training improvements..
 
 
